@@ -35,11 +35,37 @@ async.series([
         let productNameNodeId;
         the_session.translateBrowsePath(browsePath, function (err, results) {
             if (!err) {
-                console.log(results[0].value.toString());
                 productNameNodeId = results[0].targets[0].targetId;
+                console.log(productNameNodeId);
             }
         });
-
+        the_subscription = new opcua.ClientSubscription(this_session, {
+                requestedPublishingInterval: 2000,
+                requestedMaxKeepAliveCount: 2000,
+                requestedLifetimeCount: 6000,
+                maxNotificationsPerPublish: 1000,
+                publishingEnabled: true,
+                priority: 10
+            });
+            the_subscription.on('started', () => {
+                console.log('subscription started');
+                callback();
+            }).on('keepalive', () => {
+                console.log('keepalive');
+            }).on('terminated', () => {
+                console.log('TERMINATED ----------------------->')
+            });
+            const monitoredItem = the_subscription.monitor({
+                nodeId: 'ns=0;i=2261',
+                attributeId: 13
+            }, {
+                samplingInterval: 100,
+                discardOldest: true,
+                queueSize: 100
+            });
+            monitoredItem.on('changed', (dataValue) => {
+                console.log(dataValue.value.value.toString());
+            });
 
     },
     function(callback) {
