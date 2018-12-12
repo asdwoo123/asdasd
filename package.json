@@ -11,6 +11,9 @@
   "license": "ISC",
   "dependencies": {
     "async": "^2.6.1",
-    "node-opcua": "^0.5.3"
+    "express": "^4.16.4",
+    "node-opcua": "^0.5.3",
+    "pug": "^2.0.3",
+    "socket.io": "^2.2.0"
   }
 }

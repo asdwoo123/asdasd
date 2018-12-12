@@ -9,6 +9,7 @@ let the_subscription, the_session;
 
 
 async.series([
+    // 서버와 연결
     function(callback) {
         client.connect(endpointUrl, (err) => {
             if (err) {
@@ -19,6 +20,7 @@ async.series([
         callback(err);
     });
     },
+    // 세션 생성
     function(callback) {
         client.createSession(null, (err, session) => {
             if (!err) {
@@ -27,11 +29,23 @@ async.series([
         callback(err);
     });
     },
+    // browse 경로 검색
     function(callback) {
-        const browsePath = [
-            opcua.makeBrowsePath("RootFolder", "/Objects/Server.ServerStatus.BuildInfo.ProductName"),
-        ];
+        the_session.browse("Root", function(err, browseResult) {
+            if(!err) {
+                browseResult.references.forEach( function(reference) {
+                    console.log( reference.browseName.toString());
+                });
+            }
+            callback(err);
+        });
+    },
+    // nodeId 검색
+    function(callback) {
 
+        const browsePath = [
+            opcua.makeBrowsePath("Root", "/Objects/Server.ServerStatus.BuildInfo.ProductName"),
+        ];
         let productNameNodeId;
         the_session.translateBrowsePath(browsePath, function (err, results) {
             if (!err) {
@@ -66,7 +80,7 @@ async.series([
             monitoredItem.on('changed', (dataValue) => {
                 console.log(dataValue.value.value.toString());
             });
-
+        callback(err);
     },
     function(callback) {
         the_session.close((err) => {

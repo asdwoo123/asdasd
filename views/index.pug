@@ -1,0 +1,17 @@
+doctype
+html
+    head
+        meta(charset='utf-8')
+        title opc ua 테스트
+    body
+        #container
+    script(src="/socket.io/socket.io.js")
+    script.
+        const socket = io.connect('http://localhost:3000', {
+           path: '/socket.io',
+           transports: ['websocket']
+        });
+        const cont = document.getElementById('container');
+        socket.on('opc data', function(data) {
+            cont.innerText = data;
+        });
