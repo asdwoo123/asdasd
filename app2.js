@@ -1,4 +1,4 @@
-const opcua = require('node-opcua');
+﻿const opcua = require('node-opcua');
 const async = require('async');
 const os = require('os');
 const SocketIO = require('socket.io');
@@ -12,37 +12,12 @@ const app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
+app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res) => {
    res.render('index');
 });
 
-let the_subscription, the_session;
-
-const server = app.listen('3000', () => {
-    console.log('웹 서버가 시작되었습니다.');
-});
-
-const io = SocketIO(server, { path: '/socket.io' });
-let the_socket;
-io.on('connection', (socket) => {
-    process.on('aaa', (data) => {
-        socket.emit('opc data', data);
-    });
-});
-
-function monitorWork(nodeId) {
-    const monitoredItem = the_subscription.monitor({
-        nodeId: `${nodeId}`,
-        attributeId: 13
-    }, {
-        samplingInterval: 100,
-        discardOldest: true,
-        queueSize: 100
-    });
-    monitoredItem.on('changed', (dataValue) => {
-        process.emit('aaa', dataValue.value.value.toString());
-    });
-}
+let the_subscription, the_session, io;
 
 async.series([
     // 서버와 연결
@@ -76,11 +51,16 @@ async.series([
         });
         the_subscription.on('started', () => {
             console.log('subscription started');
-        }).on('keepalive', () => {
-            console.log('keepalive');
-        }).on('terminated', () => {
-            console.log('TERMINATED ----------------------->')
         });
+
+        const server = app.listen('3000', () => {
+            console.log('웹 서버가 시작되었습니다.');
+        });
+
+        io = SocketIO(server, { path: '/socket.io' });
+        io.on('connection', (socket) => {
+        });
+
         monitorWork('ns=1;s=free_memory');
     },
     function(callback) {
@@ -99,4 +79,26 @@ async.series([
     }
     client.disconnect(() => {});
 });
+
+
+function monitorWork(nodeId) {
+    const monitoredItem = the_subscription.monitor({
+        nodeId: `${nodeId}`,
+        attributeId: 13
+    }, {
+        samplingInterval: 100,
+        discardOldest: true,
+        queueSize: 100
+    });
+    monitoredItem.on('changed', (dataValue) => {
+        io.sockets.emit('message', {
+            value: dataValue.value.value,
+            timestamp: dataValue.serverTimestamp,
+            nodeId: 'ns=1;s=free_memory',
+            browseName: '1:FreeMemory'
+        });
+    });
+}
+
+
 

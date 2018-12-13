@@ -3,15 +3,84 @@ html
     head
         meta(charset='utf-8')
         title opc ua 테스트
+        script(src="javascript/jquery.min.js")
+        script(src="javascript/RGraph/RGraph.common.core.js")
+        script(src="javascript/RGraph/RGraph.gauge.js")
+        script(src="javascript/RGraph/RGraph.common.effects.js")
+        script(src="javascript/RGraph/RGraph.line.js")
+        script.
+            var gauge;
+            var canvas;
+            var obj = null;
+            var data = [];
+            var numvalues = 1200;
+
+            window.onload = function() {
+                gauge = new RGraph.Gauge('cvs', 0, 100, 84)
+                    .set('scale.decimals', 0)
+                    .set('tickmarks.small', 50)
+                    .set('tickmarks.big', 5)
+                    .set('title.top', '')
+                    .set('title.top.size', 24)
+                    .set('title.top.pos', 0.15)
+                    .set('title.bottom', 'm³')
+                    .set('title.bottom.color', '#aaa')
+                    .set('border.outer', 'Gradient(white:white:white:white:white:white:white:white:white:white:#aaa)')
+                    .draw();
+                canvas = document.getElementById("cvs_graph");
+
+                function prepare_graph() {
+                    obj = new RGraph.Line('cvs_graph', [])
+                        .set('title.vpos', 0.5)
+                        .set('title.yaxis.pos', 0.5)
+                        .set('colors', ['black'])
+                        .set('linewidth', 0.75)
+                        .set('yaxispos', 'right')
+                        .set('ymax', 100)
+                        .set('xticks', 25)
+                        .set('numyticks', 0)
+                        .set('numxticks', 0)
+                        .set('background.grid', true)
+                        .set('tickmarks', true)
+                        .set('shadow', false)
+                        .set('gutter.top', 5)
+                        .set('gutter.bottom', 5);
+
+                    for (var i = 0; i < numvalues; ++i) {
+                        data.push(null);
+                    }
+                }
+
+                prepare_graph();
+            }
+
+            function drawGraph(value, timestamp) {
+                if (!obj) return;
+                RGraph.Clear(canvas);
+
+                data.push(value);
+                if (data.length > numvalues) {
+                    data = RGraph.array_shift(data);
+                }
+                obj.original_data[0] = data;
+                obj.Draw();
+            }
     body
-        #container
+        canvas#cvs(width="250" height="250") [No canvas support]
+        canvas#cvs_graph(width="650" height="250") [No canvas support]
+        #info
     script(src="/socket.io/socket.io.js")
     script.
-        const socket = io.connect('http://localhost:3000', {
-           path: '/socket.io',
-           transports: ['websocket']
+        var socket = io.connect('http://localhost:3000', {
+            path: '/socket.io'
         });
-        const cont = document.getElementById('container');
-        socket.on('opc data', function(data) {
-            cont.innerText = data;
+        var info = document.getElementById("info");
+        socket.on('message', function (data) {
+
+        gauge.value = data.value;
+        gauge.draw();
+
+        info.innerHTML = "nodeId= " + data.nodeId + " browseName= "+ data.browseName + " dataValue= " + data.value;
+        drawGraph(data.value);
         });
+
