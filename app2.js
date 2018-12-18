@@ -1,4 +1,4 @@
-﻿const opcua = require('node-opcua');
+const opcua = require('node-opcua');
 const async = require('async');
 const os = require('os');
 const SocketIO = require('socket.io');
@@ -6,7 +6,7 @@ const express = require('express');
 const path = require('path');
 
 const client = new opcua.OPCUAClient();
-const endpointUrl = `opc.tcp://${os.hostname()}:4334/UA/MyLittleServer`;
+const endpointUrl = `opc.tcp://192.168.1.11:4840`;
 const app = express();
 
 app.set('views', path.join(__dirname, 'views'));
@@ -42,7 +42,7 @@ async.series([
     },
     function(callback) {
         the_subscription = new opcua.ClientSubscription(the_session, {
-            requestedPublishingInterval: 2000,
+            requestedPublishingInterval: 500,
             requestedMaxKeepAliveCount: 2000,
             requestedLifetimeCount: 6000,
             maxNotificationsPerPublish: 1000,
@@ -59,9 +59,15 @@ async.series([
 
         io = SocketIO(server, { path: '/socket.io' });
         io.on('connection', (socket) => {
+        
         });
+monitorWork('ns=3;s="BalluffSignalLightB7"', 'BalluffSignalLightB7');
+ 	monitorWork('ns=3;s="iLightCurtainOK_L"', 'iLightCurtainOK_L');
+	monitorWork('ns=3;s="iDoorsClosed_L"', 'iDoorsClosed_L');
+	monitorWork('ns=3;s="iAirPressureOK"', 'iAirPressureOK');
+	monitorWork('ns=3;s="i24VPowerSupply"', 'i24VPowerSupply');
 
-        monitorWork('ns=1;s=free_memory');
+        
     },
     function(callback) {
         the_session.close((err) => {
@@ -81,7 +87,7 @@ async.series([
 });
 
 
-function monitorWork(nodeId) {
+function monitorWork(nodeId, browseName) {
     const monitoredItem = the_subscription.monitor({
         nodeId: `${nodeId}`,
         attributeId: 13
@@ -91,14 +97,16 @@ function monitorWork(nodeId) {
         queueSize: 100
     });
     monitoredItem.on('changed', (dataValue) => {
-        io.sockets.emit('message', {
-            value: dataValue.value.value,
+    //console.log('2진수: ', dataValue.value.value.toString(2));
+    //console.log('16진수: ', dataValue.value.value.toString(16));
+    //console.log(`${nodeId}의 값: `, dataValue.value.value);
+let dataV = dataValue.value.value;
+if (`${browseName}` === 'BalluffSignalLightB7') dataV = dataValue.value.value.toString(16);
+//console.log(dataV);
+        io.sockets.emit(`${browseName}`, {
+            value: dataV,
             timestamp: dataValue.serverTimestamp,
-            nodeId: 'ns=1;s=free_memory',
-            browseName: '1:FreeMemory'
+            nodeId: `${nodeId}`
         });
     });
 }
-
-
-
